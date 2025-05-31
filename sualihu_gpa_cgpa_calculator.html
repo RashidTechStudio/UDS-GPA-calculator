@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>UDS MANUAL GPA & CGPA Calculator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 30px;
+      background: #e0f7e9; /* Light Green */
+      color: #003300;
+    }
+
+    h1, h2 {
+      color: #006400; /* Deep Green */
+    }
+
+    label, p {
+      font-size: 16px;
+    }
+
+    select, input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      background-color: #006400;
+      color: white;
+      border: none;
+    }
+
+    button:hover {
+      background-color: #004d00;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      background: #ffffff;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    th {
+      background-color: #006400;
+      color: white;
+      padding: 10px;
+    }
+
+    td {
+      padding: 10px;
+      text-align: center;
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 90%;
+    }
+
+    .results {
+      background: #d4f5e4;
+      border-left: 6px solid #006400;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 5px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .highlight {
+      color: #004d00;
+      font-weight: bold;
+    }
+
+    #calcMode {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>UDS GPA & CGPA Calculator</h1>
+
+  <label for="calcMode"><strong>Select Calculation Mode:</strong></label>
+  <select id="calcMode" onchange="toggleMode()">
+    <option value="gpa">GPA (Current Trimester Only)</option>
+    <option value="cgpa">CGPA (Cumulative)</option>
+  </select>
+
+  <!-- GPA Section -->
+  <div id="gpaSection">
+    <h2>Enter Courses for Current Trimester</h2>
+    <table id="courseTable">
+      <thead>
+        <tr>
+          <th>Course Name</th>
+          <th>Credit Hours</th>
+          <th>Grade</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><input type="text" placeholder="e.g. MATH101" /></td>
+          <td><input type="number" min="1" value="3" /></td>
+          <td>
+            <select>
+              <option value="A+">A+</option>
+              <option value="A">A</option>
+              <option value="B+">B+</option>
+              <option value="B">B</option>
+              <option value="C+">C+</option>
+              <option value="C">C</option>
+              <option value="D+">D+</option>
+              <option value="D">D</option>
+              <option value="F">F</option>
+            </select>
+          </td>
+          <td><button onclick="removeRow(this)">Remove</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <button onclick="addRow()">Add Course</button>
+    <button onclick="calculateGPA()">Calculate GPA</button>
+  </div>
+
+  <!-- CGPA Section -->
+  <div id="cgpaSection" class="hidden">
+    <h2>Enter Previous Trimester GPAs</h2>
+    <table id="cgpaTable">
+      <thead>
+        <tr>
+          <th>Trimester</th>
+          <th>GPA</th>
+          <th>Credit Hours</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><input type="text" placeholder="e.g. L100 T1" /></td>
+          <td><input type="number" min="0" max="5" step="0.01" /></td>
+          <td><input type="number" min="1" /></td>
+          <td><button onclick="removeRow(this)">Remove</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <button onclick="addCGPARow()">Add Trimester</button>
+    <button onclick="calculateCGPA()">Calculate CGPA</button>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <script>
+    const gradePoints = {
+      "A+": 5.0,
+      "A": 4.5,
+      "B+": 4.0,
+      "B": 3.5,
+      "C+": 3.0,
+      "C": 2.5,
+      "D+": 2.0,
+      "D": 1.5,
+      "F": 0.0
+    };
+
+    function toggleMode() {
+      const mode = document.getElementById("calcMode").value;
+      document.getElementById("gpaSection").classList.toggle("hidden", mode !== "gpa");
+      document.getElementById("cgpaSection").classList.toggle("hidden", mode !== "cgpa");
+      document.getElementById("results").innerHTML = "";
+    }
+
+    function addRow() {
+      const table = document.getElementById("courseTable").getElementsByTagName("tbody")[0];
+      const newRow = table.rows[0].cloneNode(true);
+      newRow.querySelectorAll("input").forEach(input => input.value = "");
+      table.appendChild(newRow);
+    }
+
+    function addCGPARow() {
+      const table = document.getElementById("cgpaTable").getElementsByTagName("tbody")[0];
+      const newRow = table.rows[0].cloneNode(true);
+      newRow.querySelectorAll("input").forEach(input => input.value = "");
+      table.appendChild(newRow);
+    }
+
+    function removeRow(button) {
+      const row = button.parentNode.parentNode;
+      const table = row.parentNode;
+      if (table.rows.length > 1) {
+        table.removeChild(row);
+      } else {
+        alert("You must have at least one entry.");
+      }
+    }
+
+    function calculateGPA() {
+      const table = document.getElementById("courseTable").getElementsByTagName("tbody")[0];
+      let totalCredits = 0;
+      let totalPoints = 0;
+
+      for (let row of table.rows) {
+        const credit = parseFloat(row.cells[1].querySelector("input").value);
+        const grade = row.cells[2].querySelector("select").value;
+        const point = gradePoints[grade];
+
+        totalCredits += credit;
+        totalPoints += point * credit;
+      }
+
+      const gpa = (totalPoints / totalCredits).toFixed(2);
+      const classification = getClassification(gpa);
+
+      document.getElementById("results").innerHTML = `
+        <h2>GPA Results:</h2>
+        <p><span class="highlight">Total Credit Hours:</span> ${totalCredits}</p>
+        <p><span class="highlight">GPA:</span> ${gpa}</p>
+        <p><span class="highlight">Classification:</span> ${classification}</p>
+      `;
+    }
+
+    function calculateCGPA() {
+      const table = document.getElementById("cgpaTable").getElementsByTagName("tbody")[0];
+      let totalCredits = 0;
+      let totalPoints = 0;
+
+      for (let row of table.rows) {
+        const gpa = parseFloat(row.cells[1].querySelector("input").value);
+        const credit = parseFloat(row.cells[2].querySelector("input").value);
+
+        totalCredits += credit;
+        totalPoints += gpa * credit;
+      }
+
+      const cgpa = (totalPoints / totalCredits).toFixed(2);
+      const classification = getClassification(cgpa);
+
+      document.getElementById("results").innerHTML = `
+        <h2>CGPA Results:</h2>
+        <p><span class="highlight">Total Credit Hours:</span> ${totalCredits}</p>
+        <p><span class="highlight">CGPA:</span> ${cgpa}</p>
+        <p><span class="highlight">Classification:</span> ${classification}</p>
+      `;
+    }
+
+    function getClassification(score) {
+      const c = parseFloat(score);
+      if (c >= 4.5) return "Honours - First Class";
+      if (c >= 3.5) return "Honours - Second Class (Upper Division)";
+      if (c >= 2.5) return "Honours - Second Class (Lower Division)";
+      if (c >= 1.5) return "Honours - Third Class";
+      return "Fail";
+    }
+  </script>
+
+</body>
+</html>
